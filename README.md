@@ -8,15 +8,7 @@ AI agents frequently break Xcode projects when adding new files. The `.pbxproj` 
 
 ## The Solution
 
-A Ruby script wrapping the `xcodeproj` gem — the same library CocoaPods uses — that provides a simple CLI:
-
-```bash
-ruby scripts/xcode_add_files.rb \
-  --project MyApp.xcodeproj \
-  --target MyApp \
-  --group "Features/Login" \
-  --files MyApp/Features/Login/LoginVC.swift
-```
+A Ruby script wrapping the `xcodeproj` gem — the same library CocoaPods uses — that provides a simple CLI for AI agents to register files safely.
 
 ## Features
 
@@ -36,29 +28,6 @@ Or for Claude Code:
 
 ```bash
 claude plugins install github.com/CaffreySun/xcode-project-manager
-```
-
-## Usage
-
-See [SKILL.md](SKILL.md) for full documentation and all supported file types.
-
-```bash
-# Add Swift + ObjC files
-ruby scripts/xcode_add_files.rb \
-  --project MyApp.xcodeproj --target MyApp \
-  --group "Features/Auth" \
-  --files MyApp/Features/Auth/LoginView.swift MyApp/Features/Auth/AuthManager.m
-
-# Create empty directory group
-ruby scripts/xcode_add_files.rb \
-  --project MyApp.xcodeproj --target MyApp \
-  --group "Features/Settings" --create-group
-
-# Dry-run to preview
-ruby scripts/xcode_add_files.rb \
-  --project MyApp.xcodeproj --target MyApp \
-  --group "Models" \
-  --files MyApp/Models/User.swift --dry-run
 ```
 
 ## Requirements
