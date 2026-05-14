@@ -30,11 +30,6 @@ Or for Claude Code:
 claude plugins install github.com/CaffreySun/xcode-project-manager
 ```
 
-## Requirements
-
-- Ruby (macOS comes with it)
-- `xcodeproj` gem (auto-installed with CocoaPods or Fastlane; otherwise `gem install xcodeproj`)
-
 ## License
 
 MIT
