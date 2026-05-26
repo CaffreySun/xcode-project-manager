@@ -1,7 +1,6 @@
 # Xcode Project Manager
 
-A skill for AI coding agents to safely add source files, resource files, and groups to Xcode projects without manually editing `.pbxproj`.
-
+A skill for AI coding agents to safely add and remove source files, resource files, and groups in Xcode projects without manually editing `.pbxproj`.
 ## Install
 
 ```bash
@@ -26,9 +25,11 @@ A Ruby script wrapping the `xcodeproj` gem — the same library CocoaPods uses �
 
 - **26+ file types** auto-detected and routed to correct build phase
 - **Group management** — creates intermediate groups, reuses existing ones
-- **Idempotent** — safe to re-run
+- **Idempotent** — safe to re-run add/remove operations
 - **Dry-run mode** — preview without modifying the project
 - **Empty group creation** — `--create-group` for directory groups, `--logical` for navigator-only groups
+- **File removal** — unregister files from project, optionally delete from disk
+- **Group removal** — remove groups with optional recursive cleanup and disk deletion
 
 ## License
 

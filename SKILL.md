@@ -1,39 +1,50 @@
 ---
 name: xcode-project-manager
 description: >
-  Safely add source files, resource files, and groups to an Xcode project
-  (.pbxproj) without manual editing. Use this skill whenever you are working
-  on an iOS, macOS, watchOS, tvOS, or visionOS project and create any new
-  .m, .swift, .h, .mm, .c, .cpp, .metal, .json, .plist, .png, .storyboard,
-  .xib, .strings, .ttf, .xcdatamodeld, .mlmodel, or .intentdefinition file
-  that needs to appear in the Xcode project navigator and be compiled or
-  bundled. Also trigger when you need to create new groups or folders in the
-  Xcode project navigator. Trigger on any mention of: "add to Xcode",
-  "add to project", "new file in Xcode", "create group in Xcode",
-  "add to target", "register in pbxproj", "Xcode project file", or whenever
-  you write a new file in an Xcode project directory that isn't yet part of
-  the build.
+  Safely add or remove source files, resource files, and groups in an Xcode
+  project (.pbxproj) without manual editing. Use this skill whenever you are
+  working on an iOS, macOS, watchOS, tvOS, or visionOS project and create any
+  new .m, .swift, .h, .mm, .c, .cpp, .metal, .json, .plist, .png,
+  .storyboard, .xib, .strings, .ttf, .xcdatamodeld, .mlmodel, or
+  .intentdefinition file that needs to appear in the Xcode project navigator
+  and be compiled or bundled, OR whenever you need to remove files or groups
+  from the Xcode project. Trigger on any mention of: "add to Xcode", "add to
+  project", "new file in Xcode", "create group in Xcode", "add to target",
+  "register in pbxproj", "Xcode project file", "remove from Xcode", "delete
+  from project", "clean up Xcode project", "unregister from pbxproj", or
+  whenever you write or delete a file in an Xcode project directory.
 ---
 
 # Xcode Project Manager
 
-Safely add files and groups to an Xcode project via the `xcodeproj` Ruby gem —
-the same library CocoaPods and Fastlane use internally.
+Safely add and remove files and groups in an Xcode project via the `xcodeproj`
+Ruby gem — the same library CocoaPods and Fastlane use internally.
 
 **NEVER manually edit `.pbxproj`.** UUID generation, cross-referencing between
 PBXBuildFile / PBXFileReference / PBXGroup / PBXSourcesBuildPhase, and
-OpenStep plist formatting are all handled by the bundled script.
+OpenStep plist formatting are all handled by the bundled scripts.
 
 ## Workflow
 
-When this skill triggers:
+### Adding files
 
 1. **Create the source file(s)** on disk at the desired path.
-2. **Run the script** (see Usage below) to register them in the Xcode project.
+2. **Run `xcode_add_files.rb`** (see Usage below) to register them in the Xcode project.
 3. **Verify** with `--dry-run` first if unsure about group or target names.
 
-The script is idempotent — if files are already registered, re-running is a
-safe no-op.
+The add script is idempotent — if files are already registered, re-running is a safe no-op.
+
+### Removing files
+
+1. **Run `xcode_remove_files.rb`** (see Removing Files below) to unregister them.
+2. **Use `--delete-files`** to also delete the files from disk.
+3. **Verify** with `--dry-run` first to preview what will be removed.
+
+### Removing groups
+
+1. **Run `xcode_remove_files.rb --group`** to remove an empty group.
+2. **Use `--recursive`** to also remove descendant files from build phases.
+3. **Use `--delete-group`** to also remove the directory from disk.
 
 ## Prerequisites
 
@@ -95,6 +106,76 @@ ruby <skill-dir>/scripts/xcode_add_files.rb \
 ```
 
 Pure Xcode navigator grouping — no directory created on disk.
+
+## Removing files and groups
+
+All removal commands reference `scripts/xcode_remove_files.rb`. Run them from
+the directory containing the `.xcodeproj`.
+
+### Remove files from project (keep files on disk)
+
+```bash
+ruby <skill-dir>/scripts/xcode_remove_files.rb \
+  --project MyApp.xcodeproj \
+  --target MyApp \
+  --files MyApp/Features/Login/LoginVC.m MyApp/Features/Login/LoginVC.h
+```
+
+Removes the file references and build phase entries but **keeps the files on
+disk**.
+
+### Remove files from project AND delete from disk
+
+```bash
+ruby <skill-dir>/scripts/xcode_remove_files.rb \
+  --project MyApp.xcodeproj \
+  --target MyApp \
+  --files MyApp/Old/Deprecated.swift --delete-files
+```
+
+### Remove an empty group from project only
+
+```bash
+ruby <skill-dir>/scripts/xcode_remove_files.rb \
+  --project MyApp.xcodeproj \
+  --target MyApp \
+  --group "Features/OldModule"
+```
+
+Aborts if the group still contains file references or nested subgroups.
+Use `--recursive` to remove contents as well.
+
+### Remove a group and all its contents (recursive)
+
+```bash
+ruby <skill-dir>/scripts/xcode_remove_files.rb \
+  --project MyApp.xcodeproj \
+  --target MyApp \
+  --group "Features/OldModule" --recursive
+```
+
+Removes all descendant file references from build phases, cleans up nested
+subgroups, then removes the group itself.
+
+### Remove a group AND delete the directory from disk
+
+```bash
+ruby <skill-dir>/scripts/xcode_remove_files.rb \
+  --project MyApp.xcodeproj \
+  --target MyApp \
+  --group "Features/OldModule" --delete-group
+```
+
+### Removal options
+
+| Flag | Effect |
+|---|---|
+| `--files a,b,c` | File paths to remove from project |
+| `--delete-files` | Also delete removed files from disk |
+| `--group PATH` | Group path to remove |
+| `--recursive` | With `--group`: also remove all descendant files and nested subgroups |
+| `--delete-group` | With `--group`: also delete the directory from disk |
+| `--dry-run` | Preview changes without modifying the project |
 
 ## How to determine arguments
 
