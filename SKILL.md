@@ -12,7 +12,7 @@ description: >
   project", "new file in Xcode", "create group in Xcode", "add to target",
   "register in pbxproj", "Xcode project file", "remove from Xcode", "delete
   from project", "clean up Xcode project", "unregister from pbxproj", or
-  whenever you write or delete a file in an Xcode project directory.
+  whenever you create a new file or delete a file in an Xcode project directory.
 ---
 
 # Xcode Project Manager
@@ -24,27 +24,12 @@ Ruby gem — the same library CocoaPods and Fastlane use internally.
 PBXBuildFile / PBXFileReference / PBXGroup / PBXSourcesBuildPhase, and
 OpenStep plist formatting are all handled by the bundled scripts.
 
-## Workflow
+## Quick reference
 
-### Adding files
-
-1. **Create the source file(s)** on disk at the desired path.
-2. **Run `xcode_add_files.rb`** (see Usage below) to register them in the Xcode project.
-3. **Verify** with `--dry-run` first if unsure about group or target names.
-
-The add script is idempotent — if files are already registered, re-running is a safe no-op.
-
-### Removing files
-
-1. **Run `xcode_remove_files.rb`** (see Removing Files below) to unregister them.
-2. **Use `--delete-files`** to also delete the files from disk.
-3. **Verify** with `--dry-run` first to preview what will be removed.
-
-### Removing groups
-
-1. **Run `xcode_remove_files.rb --group`** to remove an empty group.
-2. **Use `--recursive`** to also remove descendant files from build phases.
-3. **Use `--delete-group`** to also remove the directory from disk.
+- **Add**: create files on disk, then run `<skill-dir>/scripts/xcode_add_files.rb` (see below)
+- **Remove files**: run `<skill-dir>/scripts/xcode_remove_files.rb`; add `--delete-files` to also delete from disk
+- **Remove group**: run `<skill-dir>/scripts/xcode_remove_files.rb --group G`; add `--recursive` for non-empty groups, `--delete-group` to delete directory
+- Always preview with `--dry-run` first when unsure
 
 ## Prerequisites
 
@@ -61,10 +46,48 @@ If missing (SPM-only project, no CocoaPods):
 gem install xcodeproj
 ```
 
+## How to determine arguments
+
+### `--project`
+Path to the `.xcodeproj`. From the project root, this is typically
+`ProjectName.xcodeproj` or `ios/ProjectName.xcodeproj`.
+
+### `--target`
+The Xcode target name — the name that appears in the Xcode scheme selector.
+Required even for group-only operations — the script uses the target name
+to locate the source root group within the project.
+If unsure, list targets:
+```bash
+ruby -r xcodeproj -e 'p = Xcodeproj::Project.open("MyApp.xcodeproj"); puts p.targets.map(&:name)'
+```
+
+### `--group`
+The group path in the Xcode Project Navigator, relative to the source root
+group (the top-level group named after the project). Use `/` as separator.
+Examples: `"Features/Login"`, `"Models"`, `"Resources/Images"`.
+
+When **adding**, if the group doesn't exist yet, the script creates it (and
+any intermediate groups) automatically, with a matching directory on disk.
+When **removing**, the group must already exist in the project.
+
+### `--files`
+One or more file paths, relative to the current working directory.
+Accepts both space-separated (`--files a.m b.h`) and comma-separated
+(`--files a.m,b.h`) forms.
+These files must already exist on disk before running the **add** script.
+
+### `--source-group` (optional)
+If auto-detection fails, specify the source root group explicitly.
+Auto-detection tries (in order):
+1. Group whose `path` matches the target name
+2. Group whose `path` matches the project name
+3. The group with the most children
+
 ## Usage
 
-All commands reference `scripts/xcode_add_files.rb` relative to this skill's
-directory. Run them from the directory containing the `.xcodeproj`:
+In all examples below, replace `<skill-dir>` with this skill's root directory
+(the directory containing `SKILL.md` and `scripts/`).
+Run commands from the directory containing the `.xcodeproj`:
 
 ### Add source/resource files
 
@@ -82,6 +105,7 @@ The script:
 - Reuses existing groups when they do
 - Is **idempotent** — re-running with the same files is safe
 - Supports `--dry-run` to preview changes
+- If auto-detection of the source root group fails, use `--source-group` (see above)
 
 ### Create an empty group (mapped to a real directory)
 
@@ -109,8 +133,8 @@ Pure Xcode navigator grouping — no directory created on disk.
 
 ## Removing files and groups
 
-All removal commands reference `scripts/xcode_remove_files.rb`. Run them from
-the directory containing the `.xcodeproj`.
+Use `<skill-dir>/scripts/xcode_remove_files.rb` for all commands below.
+Run from the directory containing the `.xcodeproj`.
 
 ### Remove files from project (keep files on disk)
 
@@ -140,8 +164,9 @@ ruby <skill-dir>/scripts/xcode_remove_files.rb \
   --project MyApp.xcodeproj \
   --target MyApp \
   --group "Features/OldModule"
-```
 
+```
+Unlike `--group` in add mode, the group **must already exist** in the project.
 Aborts if the group still contains file references or nested subgroups.
 Use `--recursive` to remove contents as well.
 
@@ -169,51 +194,18 @@ ruby <skill-dir>/scripts/xcode_remove_files.rb \
 ### Removal options
 
 | Flag | Effect |
-|---|---|
-| `--files a,b,c` | File paths to remove from project |
+| --- | --- |
+| `--files FILE [FILE...]` | File paths to remove from project (space or comma-separated) |
 | `--delete-files` | Also delete removed files from disk |
 | `--group PATH` | Group path to remove |
 | `--recursive` | With `--group`: also remove all descendant files and nested subgroups |
 | `--delete-group` | With `--group`: also delete the directory from disk |
 | `--dry-run` | Preview changes without modifying the project |
 
-## How to determine arguments
-
-### `--project`
-Path to the `.xcodeproj`. From the project root, this is typically
-`ProjectName.xcodeproj` or `ios/ProjectName.xcodeproj`.
-
-### `--target`
-The Xcode target name — the name that appears in the Xcode scheme selector.
-If unsure, list targets:
-```bash
-ruby -r xcodeproj -e 'p = Xcodeproj::Project.open("MyApp.xcodeproj"); puts p.targets.map(&:name)'
-```
-
-### `--group`
-The group path in the Xcode Project Navigator, relative to the source root
-group (the top-level group named after the project). Use `/` as separator.
-Examples: `"Features/Login"`, `"Models"`, `"Resources/Images"`.
-
-If the group doesn't exist yet, the script creates it (and any intermediate
-groups) automatically. Groups are created with `path` matching their name,
-so they map to real directories.
-
-### `--files`
-One or more file paths, relative to the current working directory.
-These files must already exist on disk before running the script.
-
-### `--source-group` (optional)
-If auto-detection fails, specify the source root group explicitly.
-Auto-detection tries (in order):
-1. Group whose `path` matches the target name
-2. Group whose `path` matches the project name
-3. The group with the most children
-
 ## Supported file types
 
 | Extension | Build Phase | `lastKnownFileType` |
-|---|---|---|
+| --- | --- | --- |
 | `.swift` | Sources | `sourcecode.swift` |
 | `.m` | Sources | `sourcecode.c.objc` |
 | `.mm` | Sources | `sourcecode.cpp.objcpp` |
@@ -236,19 +228,41 @@ Auto-detection tries (in order):
 | `.xcdatamodeld` | Resources | `wrapper.xcdatamodeld` |
 | `.framework`, `.dylib`, `.tbd`, `.a` | (none) | manual linking |
 
+## Troubleshooting
+
+### "Target 'X' not found"
+The script prints all available target names. Verify `--target` against that
+list. Common mistake: using the project name when the target name differs
+(check the Xcode scheme selector). `--target` is required even for group-only
+operations — the script uses it to locate the source root group.
+
+### "Group not found: X" (remove mode)
+The group must already exist in the project. Use `--source-group` if the
+group is under a non-standard root. Check the path separator is `/` and the
+path is relative to the source root group.
+
+### Source root group auto-detection fails
+Use `--source-group` to specify the root group explicitly (see above).
+This happens when the project structure doesn't match the common patterns
+(e.g. target name ≠ group name, deeply nested workspaces).
+
+### Command fails with "cannot load such file" or no output
+The `xcodeproj` gem is not installed. Run `gem install xcodeproj` (see
+Prerequisites). Also verify you're running from the directory containing
+the `.xcodeproj`. Use `--dry-run` to test arguments safely.
+
 ## Idempotency
 
-The script is safe to run multiple times with the same arguments. It checks
-whether a file is already referenced (by `real_path`) and already included
-in the target's build phase — if so, it skips that file.
+Both scripts are safe to run multiple times with the same arguments:
+- **Add**: skips files already referenced (checked by `real_path`) and already
+  included in the target's build phase.
+- **Remove**: skips files or groups not found in the project — produces a
+  warning but does not error.
 
-## Error recovery
+## Safety & notes
 
-If something goes wrong, the project is not saved. Fix the issue and re-run.
-If a partial save occurred, use `git checkout` to restore the `.pbxproj`.
-
-## Important notes
-
+- **No partial saves**: if something goes wrong, the project is not saved.
+  Fix the issue and re-run. If recovery is needed, `git checkout` the `.pbxproj`.
 - Run from the directory containing the `.xcodeproj`, or use absolute paths.
 - The script resolves `--files` paths relative to the current working directory.
 - For `.h` files: added to Headers build phase. In modern Xcode projects this

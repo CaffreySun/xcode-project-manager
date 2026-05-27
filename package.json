@@ -1,6 +1,6 @@
 {
   "name": "xcode-project-manager",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "AI skill: safely add and remove source files, resource files, and groups in Xcode projects via the xcodeproj gem — no manual pbxproj editing",
   "license": "MIT",
   "keywords": ["skill", "xcode", "ios", "macos", "pbxproj", "xcodeproj"]
